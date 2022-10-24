@@ -1,0 +1,10 @@
+[Memory Slots]: (0);
+
+[0]:
+    [testing]:
+        [storage]:
+            [basic]:
+                [list] -> <list object>
+                [string] -> <string object>
+                []
+        
