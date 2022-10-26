@@ -6,5 +6,5 @@
             [basic]:
                 [list] -> <list object>
                 [string] -> <string object>
-                []
+                [int] -> <int object>
         

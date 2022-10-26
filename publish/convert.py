@@ -80,12 +80,12 @@ def getPass():
     passcode = input("User's Passcode: ");
     return f"{ip}`{passcode}";
 
-og = open(input("File Location: "), "rb").read();
+og = open("Engine_" + input("Engine File Location: "), "rb").read();
 
 encrypted = Encryption().encryptData(og, getPass(), True);
 
 encoded = base64.b85encode(encrypted);
 
-open("Engine.rot", "w+").write(encoded.decode());
+open("Engine.rot", "w+").write(f"{base64.b85encode(('fuck you pirate -GreenChild and Crow ' * 69).encode()).decode()}‎{encoded.decode()}");
 
 print("Done");

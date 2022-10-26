@@ -3,10 +3,8 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import engine;
 from getmac import get_mac_address as gma
-from engine import Error;
-
+from source.engine import Error;
 
 class Encryption:
     def getKeyFromCustomPass(self, password_provided):
@@ -58,7 +56,7 @@ class Encryption:
         try:
             decrypted = f.decrypt(new_encrypted)
         except:
-            raise Error("Encryption", "Engine could not be decrypted");
+            raise Exception(Error("Encryption", "Engine could not be decrypted"));
 
         if not isByte:
             return decrypted.decode()
@@ -90,8 +88,8 @@ if __name__ == "__main__":
             key = getPasscode();
             return f"{ip}`{key}";
 
-        try: decoded = base64.b85decode(open("Engine.rot", "rb").read());
-        except: raise Error("B64", "Engine file not found");
+        try: decoded = base64.b85decode(open("Engine.rot", "r").read().split("‎")[1].encode());
+        except: raise Exception(Error("B64", "Engine file not found"));
 
         decrypt = encryption.decryptData(
             getPassword(),
@@ -99,8 +97,9 @@ if __name__ == "__main__":
             True,
         );
 
+
         try: engine = pickle.loads(decrypt);
-        except Exception as error: raise Error(f"Pickle", "Engine Object Broken; Python Error {[error]}");
+        except Exception as error: raise Exception(Error(f"Pickle", f"Engine Object Broken; Python Error [{error}]"));
         engine.run();
 
     except Exception as error:

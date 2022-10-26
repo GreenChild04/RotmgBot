@@ -4,8 +4,8 @@ from dill.source import getsource;
 import sys;
 
 
-class Error(Exception):
-    def __init__(self, type, msg=None) -> None:
+class Error:
+    def __init__(self, type, msg=None):
         self.type = type;
         self.error = msg;
 
@@ -68,12 +68,23 @@ class Loc:
     def __repr__(self) -> str:
         return self.name;
 
+
+'''Classes'''
+class TestClass:
+    def __init__(self, engine, data) -> None:
+        self.data = data;
+        self.engine = engine;
+
+    def run(self):
+        print(f"Engine is working! Success: [{self.data}]");
+
 class Memory:
-    def __init__(self, log, locs=[Loc(0)]) -> None:
+    def __init__(self, this, log, locs=[Loc(0)]) -> None:
         '''Instance Varibles'''
         self.log = log;
         self.error = None;
         self.result = None;
+        self.this = this;
         '''LT Varibles'''
         self.locs = locs;
 
@@ -114,39 +125,44 @@ class Memory:
         return self;
 
     def copy(self):
-        return Memory(self.log, self.locs);
+        return Memory(self.this, self.log, self.locs);
 
-    def new(self, log, locs=[Loc(0)]):
-        return Memory(log, locs);
+    def new(self, this, log, locs=[Loc(0)]):
+        return Memory(this, log, locs);
 
 
+'''Engine'''
 class Engine:
     def __init__(self) -> None:
         '''Internal Varibles'''
-        self.version = "0.1.2";
+        self.version = "0.1.7";
         '''Function Instances'''
-        self.funs = self.getFuns();
+        self.objs = self.getObjs();
         '''Imports'''
-        self.memory = Memory(None);
         self.loc = Loc("Vital");
-        '''Temp Varibles'''
-        self.return_ = None;
 
     '''Anti Piracy Stuff'''
 
-    def getFuns(self):
-        oldFuns = [self.run, self.export, self.test, self.setBasicData];
-        funs = {};
+    def getObjs(self):
+        oldFuns = [self.run, self.export, self.test, self.setBasicData, TestClass, Memory];
+        objs = {};
 
         for i in oldFuns:
-            funs[i.__name__] = getsource(i);
+            objs[i.__name__] = getsource(i);
 
-        return funs;
+        return objs;
 
     def r(self, name, *args):
         uName = name if isinstance(name, str) else name.__name__;
+        class Result:
+            def __init__(self) -> None:
+                self.result = None;
+            def return_(self, result):
+                self.result = result;
 
-        fixIndent = self.funs[uName].split("    ");
+        return_ = Result();
+
+        fixIndent = self.objs[uName].split("    ");
         newFun = "";
         count = -1
         for i in fixIndent:
@@ -154,33 +170,56 @@ class Engine:
             newFun += f"    {i}" if count > 1 else i;
 
         argument = "";
+        argDict = {};
+        count = -1;
         for i in args:
-            argument += f", {i}" if not isinstance(i, str) else f", \"{i}\"";
+            count += 1;
+            key = f"___{count}Object";
+            argDict[key] = i;
+            argument += f", {key}";
 
-        statement = f"{newFun}\n\n{uName}(this{argument});";
-        exec(statement, globals().update({"this": self}));
-        return_ = self.return_;
-        self.return_ = None;
-        return self.return_;
+        statement = f"{newFun}\n\nReturn({uName}(this{argument}));";
+        lib = globals(); lib.update({"this": self, "Return": return_.return_}); lib.update(argDict);
+        exec(statement, lib);
+        return return_.result;
 
-    '''Actual Program'''
+    def c(self, name, *args):
+        class Result:
+            def __init__(self) -> None:
+                self.result = None;
+            def return_(self, result):
+                self.result = result;
+
+        return_ = Result();
+
+        argument = "";
+        argDict = {};
+        count = -1;
+        for i in args:
+            count += 1;
+            key = f"___{count}Object";
+            argDict[key] = i;
+            argument += f", {key}" if count > 0 else key;
+
+        statement = f"{self.objs[name]}\n\nReturn({name}({argument}));";
+        lib = globals(); lib.update({"Return": return_.return_}); lib.update(argDict);
+        exec(statement, lib);
+        return return_.result;
+
+    '''Functions'''
 
     def export(self):
         with open(f"Engine_{self.version}", "wb+") as file:
             pickle.dump(self, file);
 
-    def setBasicData(self):
-        mem = self.memory.new(None);
-        mem.commit(0, ["testing", "storage", "basic"], self.loc.new("list", ["value1", "value2", "value3"]));
-        mem.commit(0, ["testing", "storage", "basic"], self.loc.new("string", "default"));
-        mem.commit(0, ["testing", "storage", "basic"], self.loc.new("int", 12));
-
     def run(self):
         print(f"Welcome to botname version {self.version}");
-        print(self.test("return value"));
         self.setBasicData();
-        mem = self.memory.new(None);
+        mem = self.c("Memory", self, None);
+        test = TestClass(self, "Class");
+        test.run();
+        self.test("function");
 
     def test(self, admsg):
         print(f"Engine is working! Success: [{admsg}]");
-        self.return_ = True; return True;
+        return True;

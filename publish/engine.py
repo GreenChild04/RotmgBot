@@ -3,12 +3,18 @@ import base64;
 from dill.source import getsource;
 import sys;
 
-
 class Engine:
     def r(self, name, *args):
         uName = name if isinstance(name, str) else name.__name__;
+        class Result:
+            def __init__(self) -> None:
+                self.result = None;
+            def return_(self, result):
+                self.result = result;
 
-        fixIndent = self.funs[uName].split("    ");
+        return_ = Result();
+
+        fixIndent = self.objs[uName].split("    ");
         newFun = "";
         count = -1
         for i in fixIndent:
@@ -16,24 +22,52 @@ class Engine:
             newFun += f"    {i}" if count > 1 else i;
 
         argument = "";
+        argDict = {};
+        count = -1;
         for i in args:
-            argument += f", {i}" if not isinstance(i, str) else f", \"{i}\"";
+            count += 1;
+            key = f"___{count}Object";
+            argDict[key] = i;
+            argument += f", {key}";
 
-        statement = f"{newFun}\n\n{uName}(this{argument});";
-        exec(statement, globals().update({"this": self}));
-        return_ = self.return_;
-        self.return_ = None;
-        return return_;
+        statement = f"{newFun}\n\nReturn({uName}(this{argument}));";
+        lib = globals(); lib.update({"this": self, "Return": return_.return_}); lib.update(argDict);
+        exec(statement, lib);
+        return return_.result;
+
+    def c(self, name, *args):
+        class Result:
+            def __init__(self) -> None:
+                self.result = None;
+            def return_(self, result):
+                self.result = result;
+
+        return_ = Result();
+
+        argument = "";
+        argDict = {};
+        count = -1;
+        for i in args:
+            count += 1;
+            key = f"___{count}Object";
+            argDict[key] = i;
+            argument += f", {key}" if count > 0 else key;
+
+        statement = f"{self.objs[name]}\n\nReturn({name}({argument}));";
+        lib = globals(); lib.update({"Return": return_.return_}); lib.update(argDict);
+        exec(statement, lib);
+        return return_.result;
 
     '''Function Redirects'''
 
     def run(self): return self.r("run");
-    def test(self, a): return self.r("test", a);
     def export(self): return self.r("export");
-    def setBasicData(self): return self.r("setBasicData");
+    def test(self, a): return self.r("test", a);
 
-class Error(Exception):
-    def __init__(self, type, msg=None) -> None:
+
+'''Classes'''
+class Error:
+    def __init__(self, type, msg=None):
         self.type = type;
         self.error = msg;
 
@@ -94,54 +128,3 @@ class Loc:
 
     def __repr__(self) -> str:
         return self.name;
-
-class Memory:
-    def __init__(self, log, locs=[Loc(0)]) -> None:
-        '''Instance Varibles'''
-        self.log = log;
-        self.error = None;
-        self.result = None;
-        '''LT Varibles'''
-        self.locs = locs;
-
-    def register(self, res):
-        if isinstance(res, Memory):
-            self.error = res.error;
-            return res.result;
-
-    def failure(self, other):
-        if isinstance(other, Error) and not self.error:
-            self.error = other;
-            return self;
-
-    def output(self, other):
-        self.result = other;
-        return self;
-
-    def search(self, slot, *names):
-        self.refresh();
-        try: stem = self.locs[slot];
-        except: raise Error("Memory", f"Cannot access slot '{slot}' in memory locations");
-        dirc = [slot]; dirc.extend(names);
-        return stem.search(dirc);
-
-    def refresh(self):
-        try: self.locs = pickle.loads(base64.b85decode(open("Memory.rot", "rb").read()));
-        except: pass;
-
-    def commit(self, slot, dirc, loc):
-        self.refresh();
-        try: stem = self.locs[slot];
-        except: raise Error("Memory", f"Cannot access slot '{slot}' in memory locations");
-        stem.append(dirc, loc);
-        open("Memory.rot", "w").write(base64.b85encode(pickle.dumps(self.locs)).decode());
-
-        # self.log(f"Successfully commited memory at loc {dirc.append(loc.name)}");
-
-        return self;
-
-    def copy(self):
-        return Memory(self.log, self.locs);
-
-    def new(self, log, locs=[Loc(0)]):
-        return Memory(log, locs);
